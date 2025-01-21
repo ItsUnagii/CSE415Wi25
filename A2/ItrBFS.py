@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """ ItrBFS.py
-Student Names:
-UW NetIDs:
+Student Names: Aidan Lee
+UW NetIDs: alee2005
 CSE 415, Winter, 2025, University of Washington
 
 This code contains my implementation of the Iterative BFS algorithm.

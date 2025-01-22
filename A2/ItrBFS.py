@@ -1,6 +1,6 @@
 """ ItrBFS.py
 Student Names: Aidan Lee & Dane Grassy
-UW NetIDs: alee2005
+UW NetIDs: alee2005, dgrassy
 CSE 415, Winter, 2025, University of Washington
 
 This code contains my implementation of the Iterative BFS algorithm.

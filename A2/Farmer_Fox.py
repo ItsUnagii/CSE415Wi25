@@ -1,7 +1,7 @@
 '''Farmer_Fox.py
 by Aidan Lee and Dane Grassy
-UWNetIDs: alee2005, [INSERT HERE]
-Student numbers: 2176869, [INSERT HERE]
+UWNetIDs: alee2005, dgrassy
+Student numbers: 2176869, 2232552
 
 Assignment 2, in CSE 415, Winter 2025
  

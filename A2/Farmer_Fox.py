@@ -116,16 +116,10 @@ class State:
         news.farmer = 1 - news.farmer
         return news
     
-    def is_goal(self):
-        return is_goal(self)
-    
     def goal_message(self):
         return goal_message(self)
     
     
-def is_goal(self):
-    ''' Tests whether the current state is the goal state. '''
-    return self.farmer == RIGHT and self.fox == RIGHT and self.chicken == RIGHT and self.grain == RIGHT
 
 def goal_message(self):
     return "Congratulations on successfully moving the farmer, fox, chicken, and grain across the river!"
@@ -161,7 +155,9 @@ OPERATORS = [Operator("Move " + item,
 
 # Finish off with the GOAL_TEST and GOAL_MESSAGE_FUNCTION here.
 #<GOAL_TEST>
-GOAL_TEST = lambda s: is_goal(s)
+def GOAL_TEST(self):
+    ''' Tests whether the current state is the goal state. '''
+    return self.farmer == RIGHT and self.fox == RIGHT and self.chicken == RIGHT and self.grain == RIGHT 
 #</GOAL_TEST>
 
 #<GOAL_MESSAGE_FUNCTION>

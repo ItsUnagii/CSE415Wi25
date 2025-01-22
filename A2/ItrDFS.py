@@ -1,56 +1,58 @@
-""" ItrBFS.py
-Student Names: Aidan Lee & Dane Grassy
-UW NetIDs: alee2005
-CSE 415, Winter, 2025, University of Washington
+#!/usr/bin/python3
+""" ItrDFS.py
+Iterative Depth-First Search of a problem space.
+ Version 1.0, April 8, 2021.
+ Steve Tanimoto, Univ. of Washington, with updates by
+ Prashant Rangarajan.
+ Paul G. Allen School of Computer Science and Engineering
 
-This code contains my implementation of the Iterative BFS algorithm.
-
-Usage:
- python ItrBFS.py HumansRobotsFerry
+ Typical usage:
+ python ItrDFS.py TowersOfHanoi 4
+  or
+ python ItrDFS.py HumansRobotsFerry
+ 
+# The numbered STEP comments in the function IterativeDFS correspond
+ to the algorithm steps for iterative depth-first as presented
+ in Slide 7 of the "Basic Search Algorithms" lecture.
 """
 
 import sys
 import importlib
 
 
-class ItrBFS:
+class ItrDFS:
     """
-    Class that implements Iterative BFS for any problem space (provided in the required format)
+    Class that implements Iterative DFS for any problem space (provided in the required format)
     """
 
     def __init__(self, problem):
-        """ Initializing the ItrBFS class.
-        Please DO NOT modify this method. You may populate the required instance variables
-        in the other methods you implement.
-        """
+        """ Initializing the ItrDFS class."""
         self.Problem = importlib.import_module(problem)
         self.COUNT = None  # Number of nodes expanded
         self.MAX_OPEN_LENGTH = None  # Maximum length of the open list
         self.PATH = None  # Solution path
         self.PATH_LENGTH = None  # Length of the solution path
         self.BACKLINKS = None  # Predecessor links, used to recover the path
-        print("\nWelcome to ItrBFS")
+        print("\nWelcome to ItrDFS")
 
-    def runBFS(self):
-        # Comment out the line below when this function is implemented.
-        # raise NotImplementedError
+    def runDFS(self):
         """This is an encapsulation of some setup before running
-        BFS, plus running it and then printing some stats."""
+        DFS, plus running it and then printing some stats."""
         initial_state = self.Problem.CREATE_INITIAL_STATE()
         print("Initial State:")
         print(initial_state)
-        
+
         self.COUNT = 0
         self.MAX_OPEN_LENGTH = 0
         self.BACKLINKS = {}
 
-        self.IterativeBFS(initial_state)
+        self.IterativeDFS(initial_state)
         print(f"Number of states expanded: {self.COUNT}")
         print(f"Maximum length of the open list: {self.MAX_OPEN_LENGTH}")
         print(f"Path Length: {self.PATH_LENGTH}")
-    
-    def IterativeBFS(self, initial_state):
-        """Actual BFS algorithm"""
+
+    def IterativeDFS(self, initial_state):
+        """This is the actual algorithm"""
         # STEP 1. Put the start state on a list OPEN
         OPEN = [initial_state]
         CLOSED = []
@@ -58,7 +60,7 @@ class ItrBFS:
 
         # STEP 2. If OPEN is empty, output “DONE” and stop.
         while OPEN != []:
-            report(OPEN, CLOSED, self.COUNT, self.PATH_LENGTH)
+            report(OPEN, CLOSED, self.COUNT)
             if len(OPEN) > self.MAX_OPEN_LENGTH:
                 self.MAX_OPEN_LENGTH = len(OPEN)
 
@@ -73,62 +75,64 @@ class ItrBFS:
                 print(self.Problem.GOAL_MESSAGE_FUNCTION(S))
                 self.PATH = [str(state) for state in self.backtrace(S)]
                 self.PATH_LENGTH = len(self.PATH) - 1
+                print(f"Length of solution path found: {self.PATH_LENGTH} edges")
                 return
-
-            # STEP 4. Generate each state that can be reached from S,
-            #         and if it has not been seen before, put it on OPEN
             self.COUNT += 1
+
+            # STEP 4. Generate the list L of successors of S and delete
+            #         from L those states already appearing on CLOSED.
             L = []
             for op in self.Problem.OPERATORS:
                 if op.is_applicable(S):
                     new_state = op.apply(S)
                     if not (new_state in CLOSED):
                         L.append(new_state)
-                        if new_state not in self.BACKLINKS:
-                            self.BACKLINKS[new_state] = S
+                        self.BACKLINKS[new_state] = S
 
-            # STEP 5. Delete from L any members of OPEN that occur on L.
-            # 
-            for s2 in OPEN:
-                for i in range(len(L)):
-                    if s2 == L[i]:
-                        del L[i]
+            # STEP 5. Delete from OPEN any members of OPEN that occur on L.
+            #         Insert all members of L at the front of OPEN.
+            for s2 in L:
+                for i in range(len(OPEN)):
+                    if s2 == OPEN[i]:
+                        del OPEN[i]
                         break
-            
-            OPEN = OPEN + L
+
+            OPEN = L + OPEN
             print_state_list("OPEN", OPEN)
 
     # STEP 6. Go to Step 2.
-    
-    def backtrace(self, s):
+    def backtrace(self, S):
         path = []
-        while s:
-            path.append(s)
-            s = self.BACKLINKS[s]
+        while S:
+            path.append(S)
+            S = self.BACKLINKS[S]
         path.reverse()
         print("Solution path: ")
         for s in path:
             print(s)
         return path
 
-def print_state_list(name, lst):
+
+def print_state_list(lst_name, lst):
     """
-    Prints the states in the list
+    Prints the states in lst with name lst_name
     """
-    print(name + " is now: ", end='')
+    print(f"{lst_name} is now: ", end='')
     for s in lst[:-1]:
         print(str(s), end=', ')
     print(str(lst[-1]))
 
 
-def report(open, closed, count, PATH_LENGTH):
+def report(opn, closed, count):
     """
-    Reports the current statistics
+    Reports the current statistics:
+    Length of open list
+    Length of closed list
+    Number of states expanded
     """
-    print(f"len(OPEN)= {len(open)}", end='; ')
+    print(f"len(OPEN)= {len(opn)}", end='; ')
     print(f"len(CLOSED)= {len(closed)}", end='; ')
     print(f"COUNT = {count}")
-    print(PATH_LENGTH)
 
 
 if __name__ == '__main__':
@@ -136,5 +140,5 @@ if __name__ == '__main__':
         Problem = "TowersOfHanoi"
     else:
         Problem = sys.argv[1]
-    BFS = ItrBFS(Problem)
-    BFS.runBFS()
+    DFS = ItrDFS(Problem)
+    DFS.runDFS()

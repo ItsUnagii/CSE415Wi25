@@ -56,6 +56,7 @@ class AStar:
         self.COUNT = 0
         self.MAX_OPEN_LENGTH = 0
         self.BACKLINKS = {}
+        
 
         self.AStar(initial_state)
         print(f"Number of states expanded: {self.COUNT}")
@@ -63,7 +64,7 @@ class AStar:
 
     def AStar(self, initial_state):
         """A* Search: This is the actual algorithm."""
-        self.CLOSED = []
+        self.CLOSED = My_Priority_Queue()
         self.BACKLINKS[initial_state] = None
 
         # STEP 1a. Put the start state on a priority queue called OPEN
@@ -71,6 +72,7 @@ class AStar:
         self.OPEN.insert(initial_state, 0)
         # STEP 1b. Assign g=0 to the start state.
         self.g[initial_state] = 0.0
+        self.h = self.Problem.h
 
         # STEP 2. If OPEN is empty, output "DONE" and stop.
         while len(self.OPEN) > 0:
@@ -84,9 +86,9 @@ class AStar:
             #         Put S on CLOSED.
             #         If S is a goal state, output its description
             (S, P) = self.OPEN.delete_min()
-            self.CLOSED.append(S)
+            self.CLOSED.insert(S, P)
 
-            if S.is_goal():
+            if self.Problem.GOAL_TEST(S):
                 print(self.Problem.GOAL_MESSAGE_FUNCTION(S))
                 self.PATH = [str(state) for state in self.backtrace(S)]
                 self.PATH_LENGTH = len(self.PATH) - 1
@@ -103,8 +105,17 @@ class AStar:
                 if op.is_applicable(S):
                     new_state = op.apply(S)
                     if new_state in self.CLOSED:
-                        del new_state
-                        continue
+                        edge_cost = S.edge_distance(new_state)
+                        new_g = gs + edge_cost
+                        h = self.Problem.h(new_state) # NEW: INCLUDE HEURISTIC!
+                        f = new_g + h # NEW: f(n) = g(n) + h(n)
+                        P = self.CLOSED[new_state]
+                        if f < P:
+                            del self.CLOSED[new_state]
+                            self.CLOSED.insert(new_state, f)
+                        else:
+                            del new_state
+                            continue
                     edge_cost = S.edge_distance(new_state)
                     new_g = gs + edge_cost
                     h = self.Problem.h(new_state) # NEW: INCLUDE HEURISTIC!

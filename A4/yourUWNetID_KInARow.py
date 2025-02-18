@@ -70,6 +70,12 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
        # Write code to save the relevant information in variables
        # local to this instance of the agent.
        # Game-type info can be in global variables.
+
+       self.current_game_type = game_type
+       self.playing = what_side_to_play
+       self.opponent = opponent_nickname
+       self.time_per_move = expected_time_per_move
+
        print("Change this to return 'OK' when ready to test the method.")
        return "Not-OK"
    
@@ -81,18 +87,26 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
         print("make_move has been called")
 
         print("code to compute a good move should go here.")
+        
+        # TODO: implement move making for a K-in-a-Row game.
+
+        new_state = current_state.deep_copy()
+
+        minimax_result = self.minimax(new_state, max_ply, use_alpha_beta)
+        move = minimax_result[1][0]
+        
         # Here's a placeholder:
-        a_default_move = (0, 0) # This might be legal ONCE in a game,
+        # a_default_move = (0, 0) # This might be legal ONCE in a game,
         # if the square is not forbidden or already occupied.
     
-        new_state = current_state # This is not allowed, and even if
+        # new_state = current_state # This is not allowed, and even if
         # it were allowed, the newState should be a deep COPY of the old.
     
         new_remark = "I need to think of something appropriate.\n" +\
         "Well, I guess I can say that this move is probably illegal."
 
         print("Returning from make_move")
-        return [[a_default_move, new_state], new_remark]
+        return [[move, new_state], new_remark]
 
     # The main adversarial search function:
     def minimax(self,
@@ -115,7 +129,53 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
         print('calling static_eval. Its value needs to be computed!')
         # Values should be higher when the states are better for X,
         # lower when better for O.
-        return 0
+        k = game_type.k
+
+        player1, player2 = 1, -1  # Assuming 1 for player1, -1 for player2
+        score = 0
+        
+        # Check all rows, columns, and diagonals
+        def evaluate_line(line):
+            line_score = 0
+            for i in range(len(line) - k + 1):
+                window = line[i:i + k]
+                if window.count(player1) > 0 and window.count(player2) == 0:
+                    line_score += 10 ** window.count(player1)
+                elif window.count(player2) > 0 and window.count(player1) == 0:
+                    line_score -= 10 ** window.count(player2)
+            return line_score
+        
+        # Evaluate rows
+        for row in state:
+            score += evaluate_line(row)
+        
+        # Evaluate columns
+        for col in range(len(state[0])):
+            score += evaluate_line([state[row][col] for row in range(len(state))])
+        
+        # Evaluate diagonals
+        def get_diagonals(board):
+            diagonals = []
+            rows, cols = len(board), len(board[0])
+            
+            # Main diagonals (top-left to bottom-right)
+            for r in range(rows - k + 1):
+                diagonals.append([board[r + i][i] for i in range(min(rows - r, cols))])
+            for c in range(1, cols - k + 1):
+                diagonals.append([board[i][c + i] for i in range(min(rows, cols - c))])
+            
+            # Anti-diagonals (top-right to bottom-left)
+            for r in range(rows - k + 1):
+                diagonals.append([board[r + i][cols - 1 - i] for i in range(min(rows - r, cols))])
+            for c in range(1, cols - k + 1):
+                diagonals.append([board[i][cols - 1 - (c + i)] for i in range(min(rows, cols - c))])
+            
+            return diagonals
+        
+        for diagonal in get_diagonals(state):
+            score += evaluate_line(diagonal)
+        
+        return score
  
 # OPTIONAL THINGS TO KEEP TRACK OF:
 

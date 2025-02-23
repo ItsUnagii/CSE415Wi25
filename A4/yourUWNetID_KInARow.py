@@ -1,8 +1,6 @@
 '''
 <yourUWNetID>_KInARow.py
-Authors: <your name(s) here, lastname first and partners separated by ";">
-  Example:  
-    Authors: Smith, Jane; Lee, Laura
+Authors: Jenkins, Randolph; Aidan Lee 
 
 An agent for playing "K-in-a-Row with Forbidden Squares" and related games.
 CSE 415, University of Washington
@@ -14,9 +12,14 @@ TO PROVIDE A GOOD STRUCTURE FOR YOUR IMPLEMENTATION.
 '''
 
 from agent_base import KAgent
-from game_types import State, Game_Type
+from game_types import State, Game_Type, deep_copy
+from google import genai 
+from dotenv import load_dotenv
+import os
 
-AUTHORS = 'Jane Smith and Laura Lee' 
+load_dotenv()
+
+AUTHORS = 'Randolph Jenkins and Aidan Lee' 
 
 import time # You'll probably need this to avoid losing a
  # game due to exceeding a time limit.
@@ -28,11 +31,13 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
 
     def __init__(self, twin=False):
         self.twin=twin
-        self.nickname = 'Nic'
-        if twin: self.nickname += '2'
-        self.long_name = 'Templatus Skeletus'
-        if twin: self.long_name += ' II'
-        self.persona = 'bland'
+        self.nickname = ''
+        if twin: self.nickname = 'Evil '
+        self.nickname += 'FletchBot'
+        self.long_name = 'Terrence Fletchbot '
+        if twin: self.long_name += ' 2000'
+        else: self.long_name += ' 1000'
+        self.persona = 'terence fletcher'
         self.voice_info = {'Chrome': 10, 'Firefox': 2, 'other': 0}
         self.playing = "don't know yet" # e.g., "X" or "O".
         self.alpha_beta_cutoffs_this_turn = -1
@@ -40,12 +45,18 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
         self.zobrist_table_num_entries_this_turn = -1
         self.zobrist_table_num_hits_this_turn = -1
         self.current_game_type = None
+        self.client = None
+        self.sys_instruct = None
 
     def introduce(self):
-        intro = '\nMy name is Templatus Skeletus.\n'+\
-            '"An instructor" made me.\n'+\
-            'Somebody please turn me into a real game-playing agent!\n'
-        if self.twin: intro += "By the way, I'm the TWIN.\n"
+        intro = 'Are you rushing, or are you dragging? Doesn\'t matter. I\'m Fletchbot. Terence Fletchbot.\n'+\
+            'And in this... game, let\'s call it, you\'ll learn the true meaning of tempo. \n'+\
+            'You think you know what a winning move is? You think you understand the dynamics of this board? You don\'t.\n'+\
+            'Not yet. Now, let\'s see if you can keep up. Or if you\'ll simply fold under the pressure.\n'
+        if self.twin: intro = 'And I\'m EVIL Fletchbot. Terence Fletchbot. And this isn\'t some playground scribble.\n'+\
+            'This is a contest of precision, of drive. You think you can just haphazardly drop your little \'X\' or \'O\' wherever\n'+\
+            'you please? You\'re wrong. Every move, every single move, has to have purpose. It has to have... soul.\n'+\
+            'Now, show me what you\'ve got. Or don\'t. And just admit you\'re a waste of my time.\n'
         return intro
 
     # Receive and acknowledge information about the game from
@@ -63,50 +74,79 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
                                       # and do not import any LLM or special APIs.
                                       # During the tournament, this will be False..
        if utterances_matter:
-           pass
-           # Optionally, import your LLM API here.
-           # Then you can use it to help create utterances.
-           
+            self.sys_instruct = f"You are Terence Fletcher from the 2014 film Whiplash. You are a utterance commentor for an Adversarial Search \n" +\
+                    f"K-in-a-row game, and you will comment on each move they play based on \n" +\
+                    f"the opponent's previous move or their utterance last move, or say something irrelevant but still in character.\n" +\
+                    f"You are playing {what_side_to_play} against {opponent_nickname}.\n" +\
+                    "Limit your response to at most two sentences.\n" 
+            self.client = genai.Client(api_key='AIzaSyCNDHc1wjM3Qm67x8XKE6QpbmPYZ0WLzvs') 
+     
        # Write code to save the relevant information in variables
        # local to this instance of the agent.
        # Game-type info can be in global variables.
-
+    
        self.current_game_type = game_type
        self.playing = what_side_to_play
        self.opponent = opponent_nickname
        self.time_per_move = expected_time_per_move
 
-       print("Change this to return 'OK' when ready to test the method.")
-       return "Not-OK"
+       return "OK"
    
     # The core of your agent's ability should be implemented here:             
     def make_move(self, current_state, current_remark, time_limit=1000,
-                  autograding=False, use_alpha_beta=True,
+                  autograding=True, use_alpha_beta=True,
                   use_zobrist_hashing=False, max_ply=3,
                   special_static_eval_fn=None):
-        print("make_move has been called")
+        self.alpha_beta_cutoffs_this_turn = 0  
+        self.num_static_evals_this_turn = 0
+        self.special_eval_fn = special_static_eval_fn
 
-        print("code to compute a good move should go here.")
-        
-        # TODO: implement move making for a K-in-a-Row game.
+        new_state = State(current_state)
 
-        new_state = current_state.deep_copy()
+        best_move = self.minimax(new_state, max_ply,
+                                use_alpha_beta, 
+                                float('-inf'), float('inf'))[1]
 
-        minimax_result = self.minimax(new_state, max_ply, use_alpha_beta)
-        move = minimax_result[1][0]
-        
-        # Here's a placeholder:
-        # a_default_move = (0, 0) # This might be legal ONCE in a game,
-        # if the square is not forbidden or already occupied.
-    
-        # new_state = current_state # This is not allowed, and even if
-        # it were allowed, the newState should be a deep COPY of the old.
-    
-        new_remark = "I need to think of something appropriate.\n" +\
-        "Well, I guess I can say that this move is probably illegal."
+        stats = [self.alpha_beta_cutoffs_this_turn,
+                 self.num_static_evals_this_turn,
+                 self.zobrist_table_num_entries_this_turn,
+                 self.zobrist_table_num_hits_this_turn]
+   
+        if best_move:
+            new_state = State(current_state)
+            i, j = best_move
+            new_state.board[i][j] = self.playing
+            new_remark = f"I played at position ({i}, {j}). "
+
+            prompt = (
+                # f"Explain how you would comment this move players mode based on "
+                # f"the alpha_beta_cutoffs_this_turn {self.alpha_beta_cutoffs_this_turn}"
+                # f"and the num_static_evals_this_turn {self.num_static_evals_this_turn}"
+                f"You are playing {self.playing}\n"+\
+                f"Here is the previous K-in-a-row board: {current_state}\n"+\
+                f"And here is the board after your move: {new_state.board}\n"+\
+                f"Comment on the state of the game.\n"
+                f"or respond to your opponent's comment: {current_remark}\n"
+            )   
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash",
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=self.sys_instruct),
+                contents=[prompt]
+            )
+            new_remark += response.text
+            if new_state.whose_move == "O": 
+                new_state.whose_move = "X"
+            elif new_state.whose_move == "X": 
+                new_state.whose_move = "O"
+            return [[best_move, new_state], new_remark]
 
         print("Returning from make_move")
-        return [[move, new_state], new_remark]
+        if current_state.whose_move == "O": 
+                current_state.whose_move = "X"
+        elif current_state.whose_move == "X": 
+                current_state.whose_move = "O"
+        return [[(0, 0), current_state], "No valid moves found"]
 
     # The main adversarial search function:
     def minimax(self,
@@ -115,43 +155,95 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
             pruning=False,
             alpha=None,
             beta=None):
-        print("Calling minimax. We need to implement its body.")
 
-        default_score = 0 # Value of the passed-in state. Needs to be computed.
+        if depth_remaining == 0:
+            self.num_static_evals_this_turn += 1
+            if self.special_eval_fn:
+                return [self.special_eval_fn(state), None]
+            return [self.static_eval(state, self.current_game_type), None]
+
+        best_move = None
+
+        if state.whose_move == "X":  # Maximizing player (X)
+            best_score = float('-inf')
+            for i in range(len(state.board)):
+                for j in range(len(state.board[0])):
+                    if state.board[i][j] == ' ':
+                        new_state = State(state)
+                        new_state.board[i][j] = state.whose_move
+                        new_state.whose_move = "O"
+                        
+                        # Recursively evaluate this move
+                        score = self.minimax(new_state, depth_remaining - 1,
+                                            pruning, alpha, beta)[0]
+                        
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_move = (i, j)
+                        
+                        if pruning:
+                            alpha = max(alpha, best_score)
+                            if beta <= alpha:
+                                self.alpha_beta_cutoffs_this_turn += 1
+                                return [best_score, best_move]  # Beta cutoff
+                            
+        else:  # Minimizing player (O)
+            best_score = float('inf')
+            for i in range(len(state.board)):
+                for j in range(len(state.board[0])):
+                    if state.board[i][j] == ' ':
+                        new_state = State(state)
+                        new_state.board[i][j] = state.whose_move
+                        new_state.whose_move = "X"
+                        
+                        score = self.minimax(new_state, depth_remaining - 1,
+                                            pruning, alpha, beta)[0]
+                        
+                        if score < best_score:
+                            best_score = score
+                            best_move = (i, j)
+                        
+                        if pruning:
+                            beta = min(beta, best_score)
+                            if beta <= alpha:
+                                self.alpha_beta_cutoffs_this_turn += 1
+                                return [best_score, best_move]  # Alpha cutoff
     
-        return [default_score, "my own optional stuff", "more of my stuff"]
+        return [best_score, best_move]
         # Only the score is required here but other stuff can be returned
         # in the list, after the score, in case you want to pass info
         # back from recursive calls that might be used in your utterances,
         # etc. 
  
     def static_eval(self, state, game_type=None):
-        print('calling static_eval. Its value needs to be computed!')
         # Values should be higher when the states are better for X,
         # lower when better for O.
         k = game_type.k
-
-        player1, player2 = 1, -1  # Assuming 1 for player1, -1 for player2
         score = 0
         
         # Check all rows, columns, and diagonals
         def evaluate_line(line):
             line_score = 0
-            for i in range(len(line) - k + 1):
+            for i in range(len(line) - k + 1): # for each k-length window in a line
                 window = line[i:i + k]
-                if window.count(player1) > 0 and window.count(player2) == 0:
-                    line_score += 10 ** window.count(player1)
-                elif window.count(player2) > 0 and window.count(player1) == 0:
-                    line_score -= 10 ** window.count(player2)
+                if window.count('X') == k: # X wins
+                    return float('inf')
+                elif window.count('O') == k: # O wins
+                    return float('-inf')
+                if 'X' in window and 'O' not in window: # X is close to a winning move
+                    line_score += 10 ** window.count('X')
+                elif 'O' in window and 'X' not in window: # O is close to a winning move
+                    line_score -= 10 ** window.count('O')
             return line_score
         
         # Evaluate rows
-        for row in state:
+        for row in state.board:
             score += evaluate_line(row)
         
         # Evaluate columns
-        for col in range(len(state[0])):
-            score += evaluate_line([state[row][col] for row in range(len(state))])
+        for col in range(len(state.board[0])):
+            score += evaluate_line([state.board[row][col] for row in range(len(state.board))])
         
         # Evaluate diagonals
         def get_diagonals(board):
@@ -172,7 +264,7 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
             
             return diagonals
         
-        for diagonal in get_diagonals(state):
+        for diagonal in get_diagonals(state.board):
             score += evaluate_line(diagonal)
         
         return score
@@ -184,4 +276,3 @@ class OurAgent(KAgent):  # Keep the class name "OurAgent" so a game master
 #  OPPONENT_PAST_UTTERANCES = []
 #  UTTERANCE_COUNT = 0
 #  REPEAT_COUNT = 0 or a table of these if you are reusing different utterances
-

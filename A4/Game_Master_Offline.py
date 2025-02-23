@@ -13,7 +13,7 @@ tournament play.
 '''
 
 from time import sleep
-USE_HTML = True
+USE_HTML = False
 if USE_HTML: import gameToHTML
 
 from winTesterForK import winTesterForK
@@ -60,7 +60,7 @@ def runGame():
     if USE_HTML:
         gameToHTML.startHTML(player1.nickname, player2.nickname, GAME_TYPE.short_name, 1)
     try:
-        p1comment = player1.prepare(GAME_TYPE, 'X', player2.nickname)
+        p1comment = player1.prepare(GAME_TYPE, 'X', player2.nickname, utterances_matter=True)
     except Exception as e:
         print("Failed to prepare perhaps because: ", e)
         report = 'Player 1 ('+player1.nickname+' failed to prepare, and loses by default.'
@@ -72,7 +72,7 @@ def runGame():
         if USE_HTML: gameToHTML.endHTML()
         return
     try:
-        p2comment = player2.prepare(GAME_TYPE, 'O', player1.nickname)
+        p2comment = player2.prepare(GAME_TYPE, 'O', player1.nickname, utterances_matter=True)
     except Exception as e:
         print("Failed to prepare perhaps because: ", e)
         report = 'Player 2 ('+player2.nickname+' failed to prepare, and loses by default.'
@@ -188,7 +188,8 @@ def test():
     # which is a "twin".
 
     #import yourUWNetID_KInARow as h
-    import RandomPlayer as h
+    import yourUWNetID_KInARow as h
+    import RandomPlayer as r
     px = h.OurAgent()
     po = h.OurAgent(twin=True)
     set_players(px, po)

@@ -33,6 +33,26 @@ def value_iteration(
     # noinspection PyUnusedLocal
     max_delta = 0.0
     # *** BEGIN OF YOUR CODE ***
+    
+    # Iterate over all non-terminal states
+    for state in mdp.nonterminal_states:
+        state_q_values = {}
+        
+        # Compute Q-values for each action
+        for action in mdp.actions:
+            q_value = sum(
+                (mdp.transition(state, action, next_state) * (mdp.reward(state, action, next_state) + mdp.config.gamma * v_table.get(next_state, 0))) for next_state in mdp.all_states
+            )
+            state_q_values[action] = q_value
+            
+        # q_table.update({(state, action): q_value for action, q_value in state_q_values.items()})
+        for action, q_value in state_q_values.items():
+            q_table[(state, action)] = q_value
+
+
+        best_q_value = max(state_q_values.values())
+        max_delta = max(max_delta, abs(v_table.get(state, 0) - best_q_value))
+        new_v_table[state] = best_q_value
     # ***  END OF YOUR CODE  ***
     return new_v_table, q_table, max_delta
 
@@ -55,6 +75,11 @@ def extract_policy(
             A Policy maps nonterminal states to actions.
     """
     # *** BEGIN OF YOUR CODE ***
+    policy = {}
+    for (state, action), value in q_table.items():
+        if state not in policy or value > q_table[(state, policy[state])]:
+            policy[state] = action
+    return policy
 
 
 def q_update(
@@ -74,6 +99,11 @@ def q_update(
     """
     state, action, reward, next_state = transition
     # *** BEGIN OF YOUR CODE ***
+    q_table[(state, action)] = q_table.get((state, action), 0) + alpha * (reward + 
+                                                                          mdp.config.gamma * 
+                                                                          max(q_table.get((next_state, a), 0) for a in mdp.actions) - 
+                                                                          q_table.get((state, action), 0))
+    
 
 
 def extract_v_table(mdp: tm.TohMdp, q_table: tm.QTable) -> tm.VTable:
@@ -88,6 +118,11 @@ def extract_v_table(mdp: tm.TohMdp, q_table: tm.QTable) -> tm.VTable:
             The extracted value table.
     """
     # *** BEGIN OF YOUR CODE ***
+    v_table = {}
+    for state in mdp.all_states:
+        v_table[state] = max(q_table.get((state, a), 0) for a in mdp.actions)
+    return v_table
+
 
 
 def choose_next_action(
@@ -151,3 +186,5 @@ def custom_alpha(n_step: int) -> float:
             alpha value when performing the nth Q update.
     """
     # *** BEGIN OF YOUR CODE ***
+
+    
